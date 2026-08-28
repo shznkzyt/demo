@@ -6,6 +6,7 @@ import com.demo.student.dto.StudentRequest;
 import com.demo.student.dto.StudentResponse;
 import com.demo.student.entity.Student;
 import com.demo.student.service.StudentService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -54,14 +55,14 @@ public class StudentController {
      */
     @GetMapping({"", "/"})
     public ResponseEntity<ApiResponse<PageResult<StudentResponse>>> list(
-            @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "10") Integer size) {
-        // 页码从 1 开始，拒绝 null、0 和负数，避免生成无意义的分页 SQL。
-        if (page == null || page < DEFAULT_PAGE) {
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        // 页码从 1 开始，拒绝 0 和负数，避免生成无意义的分页 SQL。
+        if (page < DEFAULT_PAGE) {
             return badRequest("页码必须从 1 开始，例如 /students?page=1&size=10");
         }
         // 每页至少查询一条数据。
-        if (size == null || size < 1) {
+        if (size < 1) {
             return badRequest("每页条数必须是正整数，例如 /students?page=1&size=10");
         }
         // 限制单次查询量，防止过大的请求占用数据库和网络资源。
@@ -87,7 +88,7 @@ public class StudentController {
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<StudentResponse>> getById(@PathVariable String id) {
         // 路径变量使用 String 接收，以便自行返回清晰的非法参数提示。
-        if (id == null || id.isBlank() || "null".equalsIgnoreCase(id)) {
+        if (id.isBlank() || "null".equalsIgnoreCase(id)) {
             return badRequest("学生 id 不能为空，请传入数字 id，例如 /students/1");
         }
         // 将校验后的文本 id 转换为数据库主键类型。
@@ -116,12 +117,7 @@ public class StudentController {
      * @return 创建成功返回 HTTP 201；参数非法返回 HTTP 400；学号重复返回 HTTP 409
      */
     @PostMapping({"", "/"})
-    public ResponseEntity<ApiResponse<StudentResponse>> create(@RequestBody(required = false) StudentRequest request) {
-        // 在进入业务层前统一校验必填项和数据库字段长度。
-        String validationMessage = validate(request);
-        if (validationMessage != null) {
-            return badRequest(validationMessage);
-        }
+    public ResponseEntity<ApiResponse<StudentResponse>> create(@Valid @RequestBody StudentRequest request) {
         // 将请求对象转换为持久化实体，同时清理所有文本字段的首尾空格。
         Student student = toStudent(request);
 
@@ -147,16 +143,11 @@ public class StudentController {
      */
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<StudentResponse>> update(
-            @PathVariable String id, @RequestBody(required = false) StudentRequest request) {
+            @PathVariable String id, @Valid @RequestBody StudentRequest request) {
         // 统一解析 id，非法值用 null 表示并转换为 400 响应。
         Long studentId = parsePositiveId(id);
         if (studentId == null) {
             return badRequest("学生 id 必须是正整数，例如 /students/1");
-        }
-        // 修改接口与新增接口共用相同的字段规则，保持数据质量一致。
-        String validationMessage = validate(request);
-        if (validationMessage != null) {
-            return badRequest(validationMessage);
         }
         // 先确认目标存在，以区分“目标不存在”和“学号冲突”两类错误。
         if (studentService.findById(studentId).isEmpty()) {
@@ -208,11 +199,11 @@ public class StudentController {
      * 将字符串形式的路径参数解析为正整数学生 id。
      *
      * @param id 原始路径参数
-     * @return 合法时返回正整数 id；为空、非数字、0 或负数时返回 null
+     * @return 合法时返回正整数 id；为空白、非数字、0 或负数时返回 null
      */
     private static Long parsePositiveId(String id) {
         // 将空白值和字符串 "null" 统一视为未提供 id。
-        if (id == null || id.isBlank() || "null".equalsIgnoreCase(id)) {
+        if (id.isBlank() || "null".equalsIgnoreCase(id)) {
             return null;
         }
         try {
@@ -225,51 +216,9 @@ public class StudentController {
     }
 
     /**
-     * 校验新增和修改学生时共用的请求字段。
-     * 字段长度与 students 表定义保持一致，避免由数据库截断或抛出异常。
-     *
-     * @param request 学生请求对象
-     * @return 校验通过返回 null，否则返回第一条可直接展示给客户端的错误信息
-     */
-    private static String validate(StudentRequest request) {
-        // 请求体缺失时，Spring 会因为 required=false 传入 null。
-        if (request == null) {
-            return "请求体不能为空";
-        }
-        // 学号对应数据库非空列，并承担学生的业务唯一标识。
-        if (isBlank(request.getStudentNo())) {
-            return "学号不能为空";
-        }
-        if (request.getStudentNo().trim().length() > 32) {
-            return "学号长度不能超过 32 个字符";
-        }
-        // 姓名对应数据库非空列，不能只包含空白字符。
-        if (isBlank(request.getName())) {
-            return "姓名不能为空";
-        }
-        if (request.getName().trim().length() > 64) {
-            return "姓名长度不能超过 64 个字符";
-        }
-        // 以下可选字段为空时长度按 0 处理，非空时按去除首尾空格后的长度校验。
-        if (length(request.getGender()) > 16) {
-            return "性别长度不能超过 16 个字符";
-        }
-        if (length(request.getClassName()) > 64) {
-            return "班级名称长度不能超过 64 个字符";
-        }
-        if (length(request.getPhone()) > 32) {
-            return "手机号长度不能超过 32 个字符";
-        }
-        if (length(request.getEmail()) > 128) {
-            return "邮箱长度不能超过 128 个字符";
-        }
-        return null;
-    }
-
-    /**
      * 将接口请求对象转换为数据库实体。
      *
-     * @param request 已通过 {@link #validate(StudentRequest)} 校验的请求对象
+     * @param request 已通过 {@link Valid} 触发 Bean Validation 校验的请求对象
      * @return 规范化后的学生实体；主键和数据库时间字段由后续流程设置
      */
     private static Student toStudent(StudentRequest request) {
@@ -284,26 +233,6 @@ public class StudentController {
         student.setPhone(trimToNull(request.getPhone()));
         student.setEmail(trimToNull(request.getEmail()));
         return student;
-    }
-
-    /**
-     * 判断字符串是否为 null、空字符串或仅包含空白字符。
-     *
-     * @param value 待判断字符串
-     * @return 为空白值返回 true，否则返回 false
-     */
-    private static boolean isBlank(String value) {
-        return value == null || value.isBlank();
-    }
-
-    /**
-     * 获取字符串去除首尾空格后的长度。
-     *
-     * @param value 待计算字符串
-     * @return null 返回 0，否则返回 trim 后的字符数
-     */
-    private static int length(String value) {
-        return value == null ? 0 : value.trim().length();
     }
 
     /**

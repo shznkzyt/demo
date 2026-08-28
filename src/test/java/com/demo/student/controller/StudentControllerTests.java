@@ -154,4 +154,24 @@ class StudentControllerTests {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("姓名不能为空"));
     }
+
+    @Test
+    void rejectsMalformedJson() throws Exception {
+        mockMvc.perform(post("/students")
+                        .contentType("application/json")
+                        .content("{not-json}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("请求体格式不正确，请检查 JSON 字段和日期格式"));
+    }
+
+    @Test
+    void rejectsInvalidEmail() throws Exception {
+        mockMvc.perform(post("/students")
+                        .contentType("application/json")
+                        .content("""
+                                {"studentNo":"S004","name":"赵六","email":"invalid"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("邮箱格式不正确"));
+    }
 }

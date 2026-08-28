@@ -5,11 +5,14 @@ import com.demo.common.response.ApiResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MissingPathVariableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
@@ -42,11 +45,10 @@ public class GlobalExceptionHandler {
     /**
      * 路径变量缺失或被转换成空时返回友好提示。
      *
-     * @param ex 路径变量缺失异常
      * @return data 为空的 HTTP 400 统一失败响应
      */
     @ExceptionHandler(MissingPathVariableException.class)
-    public ResponseEntity<ApiResponse<Void>> handleMissingPathVariable(MissingPathVariableException ex) {
+    public ResponseEntity<ApiResponse<Void>> handleMissingPathVariable() {
         // 不将 Spring 内部异常信息直接返回，改用调用方容易理解的业务提示。
         return badRequest("学生 id 不能为空，请传入数字 id，例如 /students/1");
     }
@@ -54,18 +56,54 @@ public class GlobalExceptionHandler {
     /**
      * 访问不存在的路径时返回友好提示。
      *
-     * @param ex 静态资源未找到异常
      * @return HTTP 404 和正确接口地址提示
      */
     @ExceptionHandler(NoResourceFoundException.class)
-    public ResponseEntity<ApiResponse<Void>> handleNotFound(NoResourceFoundException ex) {
+    public ResponseEntity<ApiResponse<Void>> handleNotFound() {
         // Spring 未匹配到 Controller 路由时会按静态资源查找失败处理，此处统一转换为接口提示。
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ApiResponse.fail("请求地址不正确，查询全部请访问 /students，按 id 查询请访问 /students/1"));
     }
 
     /**
-     * 处理数据库连接、SQL 执行和数据约束等访问异常。
+     * 处理 Bean Validation 检测到的请求字段错误。
+     *
+     * @param ex 方法参数校验异常
+     * @return HTTP 400 和第一条字段校验提示
+     */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiResponse<Void>> handleValidation(MethodArgumentNotValidException ex) {
+        // 按字段声明顺序返回第一条错误，避免一次响应给客户端堆叠过多提示。
+        String message = ex.getBindingResult().getFieldErrors().stream()
+                .findFirst()
+                .map(error -> error.getDefaultMessage())
+                .orElse("请求参数不合法");
+        return badRequest(message);
+    }
+
+    /**
+     * 处理无法反序列化的 JSON 请求体，例如 JSON 语法错误或日期格式不正确。
+     *
+     * @return HTTP 400 和请求体格式提示
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleUnreadableBody() {
+        return badRequest("请求体格式不正确，请检查 JSON 字段和日期格式");
+    }
+
+    /**
+     * 处理并发写入时由数据库唯一约束兜底检测到的重复学号。
+     *
+     * @return HTTP 409 学号冲突响应
+     */
+    @ExceptionHandler(DuplicateKeyException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDuplicateKey() {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.fail("学号已存在"));
+    }
+
+    /**
+     * 处理除唯一键冲突外的数据库连接、SQL 执行等访问异常。
      * 详细异常只记录在服务端日志中，客户端仅收到通用提示。
      *
      * @param ex Spring 数据访问异常
