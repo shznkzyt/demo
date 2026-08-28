@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.demo.student.mapper.StudentMapper">
+
+    <select id="findById" resultType="Student">
+        SELECT id,
+               student_no,
+               name,
+               gender,
+               birth_date,
+               class_name,
+               phone,
+               email,
+               created_at,
+               updated_at
+        FROM students
+        WHERE id = #{id}
+    </select>
+
+    <select id="findByStudentNo" resultType="Student">
+        SELECT id,
+               student_no,
+               name,
+               gender,
+               birth_date,
+               class_name,
+               phone,
+               email,
+               created_at,
+               updated_at
+        FROM students
+        WHERE student_no = #{studentNo}
+    </select>
+
+    <select id="findAll" resultType="Student">
+        SELECT id,
+               student_no,
+               name,
+               gender,
+               birth_date,
+               class_name,
+               phone,
+               email,
+               created_at,
+               updated_at
+        FROM students
+        ORDER BY id
+    </select>
+
+    <insert id="insert" parameterType="Student" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO students (student_no, name, gender, birth_date, class_name, phone, email)
+        VALUES (#{studentNo}, #{name}, #{gender}, #{birthDate}, #{className}, #{phone}, #{email})
+    </insert>
+
+    <update id="update" parameterType="Student">
+        UPDATE students
+        SET student_no = #{studentNo},
+            name = #{name},
+            gender = #{gender},
+            birth_date = #{birthDate},
+            class_name = #{className},
+            phone = #{phone},
+            email = #{email},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM students
+        WHERE id = #{id}
+    </delete>
+
+</mapper>
