@@ -20,7 +20,7 @@
 | --- | --- | --- |
 | 主机 | `127.0.0.1` | `MYSQL_HOST` |
 | 端口 | `3306` | `MYSQL_PORT` |
-| 数据库 | `Test` | `MYSQL_DATABASE` |
+| 数据库 | `demo` | `MYSQL_DATABASE` |
 | 用户名 | `root` | `MYSQL_USER` |
 | 密码 | 空 | `MYSQL_PASSWORD` |
 
