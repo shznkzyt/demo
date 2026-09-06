@@ -22,7 +22,7 @@
 | 端口 | `3306` | `MYSQL_PORT` |
 | 数据库 | `demo` | `MYSQL_DATABASE` |
 | 用户名 | `root` | `MYSQL_USER` |
-| 密码 | 空 | `MYSQL_PASSWORD` |
+| 密码 | `123456` | `MYSQL_PASSWORD` |
 
 可以通过环境变量覆盖默认配置：
 
