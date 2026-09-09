@@ -115,6 +115,18 @@ class StudentControllerTests {
     }
 
     @Test
+    void rejectsDuplicateStudentNoWhenUpdating() throws Exception {
+        mockMvc.perform(put("/students/1")
+                        .contentType("application/json")
+                        .content("""
+                                {"studentNo":"S002","name":"重复学号"}
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("学号已存在"));
+    }
+
+    @Test
     void updatesStudent() throws Exception {
         mockMvc.perform(put("/students/1")
                         .contentType("application/json")
@@ -144,6 +156,17 @@ class StudentControllerTests {
 
         mockMvc.perform(get("/students/1"))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void rejectsInvalidStudentIdConsistently() throws Exception {
+        mockMvc.perform(get("/students/not-a-number"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("学生 id 必须是正整数，例如 /students/1"));
+
+        mockMvc.perform(delete("/students/0"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("学生 id 必须是正整数，例如 /students/1"));
     }
 
     @Test

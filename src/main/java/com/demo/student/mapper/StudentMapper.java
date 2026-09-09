@@ -22,14 +22,6 @@ public interface StudentMapper {
     Student findById(@Param("id") Long id);
 
     /**
-     * 根据学号查询学生。
-     *
-     * @param studentNo 学号，通过 @Param 显式命名为 SQL 中的 studentNo 参数
-     * @return 学生信息，不存在时为 null
-     */
-    Student findByStudentNo(@Param("studentNo") String studentNo);
-
-    /**
      * 查询学生列表，分页由 PageHelper 拦截器完成。
      *
      * @return 按主键升序排列的学生列表；无数据时返回空列表

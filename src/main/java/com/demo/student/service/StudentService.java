@@ -29,14 +29,6 @@ public interface StudentService {
     PageResult<Student> findPage(int page, int size);
 
     /**
-     * 根据学号查询学生。
-     *
-     * @param studentNo 已规范化的学号
-     * @return 存在则返回学生信息，否则为空
-     */
-    Optional<Student> findByStudentNo(String studentNo);
-
-    /**
      * 新增学生。
      *
      * @param student 已完成校验和规范化、尚无主键的学生实体

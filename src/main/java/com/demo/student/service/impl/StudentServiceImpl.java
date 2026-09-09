@@ -71,19 +71,6 @@ public class StudentServiceImpl implements StudentService {
     }
 
     /**
-     * 根据学号查询学生，用于详情查询或写入前的学号唯一性检查。
-     *
-     * @param studentNo 已去除首尾空格的学号
-     * @return 学号已存在时返回学生实体，否则返回空 Optional
-     */
-    @Transactional(readOnly = true)
-    @Override
-    public Optional<Student> findByStudentNo(String studentNo) {
-        // 统一使用 Optional 表示“可能不存在”，避免上层进行 null 判断。
-        return Optional.ofNullable(studentMapper.findByStudentNo(studentNo));
-    }
-
-    /**
      * 新增学生并返回数据库中的完整记录。
      * <p>
      * insert 执行后，MyBatis 会将数据库生成的主键回填到 student.id，

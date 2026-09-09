@@ -18,21 +18,6 @@
         WHERE id = #{id}
     </select>
 
-    <select id="findByStudentNo" resultType="Student">
-        SELECT id,
-               student_no,
-               name,
-               gender,
-               birth_date,
-               class_name,
-               phone,
-               email,
-               created_at,
-               updated_at
-        FROM students
-        WHERE student_no = #{studentNo}
-    </select>
-
     <select id="findAll" resultType="Student">
         SELECT id,
                student_no,

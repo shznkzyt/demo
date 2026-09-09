@@ -87,19 +87,8 @@ public class StudentController {
      */
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<StudentResponse>> getById(@PathVariable String id) {
-        // 路径变量使用 String 接收，以便自行返回清晰的非法参数提示。
-        if (id.isBlank() || "null".equalsIgnoreCase(id)) {
-            return badRequest("学生 id 不能为空，请传入数字 id，例如 /students/1");
-        }
-        // 将校验后的文本 id 转换为数据库主键类型。
-        long studentId;
-        try {
-            studentId = Long.parseLong(id.trim());
-        } catch (NumberFormatException ex) {
-            return badRequest("学生 id 必须是数字，例如 /students/1");
-        }
-        // 数据库自增主键必须是正整数。
-        if (studentId <= 0) {
+        Long studentId = parsePositiveId(id);
+        if (studentId == null) {
             return badRequest("学生 id 必须是正整数，例如 /students/1");
         }
         // Optional 有值时转换并返回；无值时统一构造 404 响应。
@@ -120,12 +109,6 @@ public class StudentController {
     public ResponseEntity<ApiResponse<StudentResponse>> create(@Valid @RequestBody StudentRequest request) {
         // 将请求对象转换为持久化实体，同时清理所有文本字段的首尾空格。
         Student student = toStudent(request);
-
-        // student_no 在数据库中具有唯一约束，提前检查可返回更友好的冲突提示。
-        if (studentService.findByStudentNo(student.getStudentNo()).isPresent()) {
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(ApiResponse.fail("学号 " + student.getStudentNo() + " 已存在"));
-        }
         // 新增后将完整实体转换为脱敏响应对象，不向客户端暴露原始联系方式。
         StudentResponse result = StudentResponse.from(studentService.create(student));
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -149,24 +132,10 @@ public class StudentController {
         if (studentId == null) {
             return badRequest("学生 id 必须是正整数，例如 /students/1");
         }
-        // 先确认目标存在，以区分“目标不存在”和“学号冲突”两类错误。
-        if (studentService.findById(studentId).isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(ApiResponse.fail("未找到 id 为 " + studentId + " 的学生信息"));
-        }
         // 请求体不接收 id，路径参数是待修改记录主键的唯一来源。
         Student student = toStudent(request);
         student.setId(studentId);
-
-        // 当前学生继续使用自己的原学号是合法的，只有被其他学生占用时才冲突。
-        boolean studentNoUsed = studentService.findByStudentNo(student.getStudentNo())
-                .filter(existing -> !studentId.equals(existing.getId()))
-                .isPresent();
-        if (studentNoUsed) {
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(ApiResponse.fail("学号 " + student.getStudentNo() + " 已存在"));
-        }
-        // 更新与查询之间记录可能被并发删除，因此 Service 仍以 Optional 表示更新结果。
+        // 更新语句的受影响行数直接区分目标是否存在，避免更新前额外查询。
         return studentService.update(student)
                 .map(StudentResponse::from)
                 .map(result -> ResponseEntity.ok(ApiResponse.ok(result, "学生信息修改成功")))
