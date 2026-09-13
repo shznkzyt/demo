@@ -185,5 +185,5 @@ MyBatis SQL 位于 `src/main/resources/mapper/StudentMapper.xml`。
 测试使用 H2 内存数据库，不依赖本地 MySQL 或生产环境凭据：
 
 ```bash
-./mvnw test
+./mvnw test 
 ```
